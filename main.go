@@ -47,8 +47,8 @@ func main() {
 
 	select {
 	case res := <-ch:
-		fmt.Printf("Resposta recebida mais rápida de %s: %s\n", res.source, res.body)
+		fmt.Printf("Resposta recebida mais rápida de %s:\n %s\n\n", res.source, res.body)
 	case <-timeout:
-		fmt.Println("Erro de timeout. Nenhuma resposta foi recebida em 1 segundo.")
+		fmt.Println("Erro de timeout. Nenhuma resposta foi recebida em menos de 1 segundo.")
 	}
 }
