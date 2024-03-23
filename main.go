@@ -7,38 +7,27 @@ import (
 	"time"
 )
 
-type ApiResponse struct {
-	Body         string
-	Source       string
-	ResponseTime float64
+// Struct para armazenar a resposta e a origem
+type response struct {
+	body   string
+	source string
 }
 
-func fetchURL(url string, source string, ch chan<- ApiResponse, done chan<- bool) {
-	startTime := time.Now()
-
-	client := &http.Client{
-		Timeout: time.Second,
-	}
-	resp, err := client.Get(url)
+func fetchURL(url string, source string, ch chan<- response) {
+	resp, err := http.Get(url)
 	if err != nil {
-		done <- true
-		fmt.Println("Erro ao fazer a requisição para", source, ":", err)
+		fmt.Println(err)
 		return
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		done <- true
-		fmt.Println("Erro ao ler a resposta de", source, ":", err)
+		fmt.Println(err)
 		return
 	}
-	body := string(bodyBytes)
 
-	elapsed := time.Since(startTime).Seconds()
-
-	ch <- ApiResponse{Body: body, Source: source, ResponseTime: elapsed}
-	done <- true
+	ch <- response{body: string(body), source: source}
 }
 
 func main() {
@@ -46,22 +35,20 @@ func main() {
 	fmt.Print("Digite o CEP para consulta: ")
 	fmt.Scanln(&cep)
 
-	brasilAPIURL := fmt.Sprintf("https://brasilapi.com.br/api/cep/v1/%s", cep)
-	viaCEPURL := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
+	brasilAPI := fmt.Sprintf("https://brasilapi.com.br/api/cep/v1/%s", cep)
+	viaCEP := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
 
-	results := make(chan ApiResponse)
-	done := make(chan bool, 2)
+	ch := make(chan response, 1)
 
-	go fetchURL(brasilAPIURL, "BrasilAPI", results, done)
-	go fetchURL(viaCEPURL, "ViaCEP", results, done)
+	go fetchURL(brasilAPI, "BrasilAPI", ch)
+	go fetchURL(viaCEP, "ViaCEP", ch)
+
+	timeout := time.After(1 * time.Second)
 
 	select {
-	case res := <-results:
-		fmt.Printf("Resposta rápida recebida de %s em %.2f segundos\n%s\n", res.Source, res.ResponseTime, res.Body)
-	case <-time.After(1 * time.Second):
+	case res := <-ch:
+		fmt.Printf("Resposta recebida mais rápida de %s: %s\n", res.source, res.body)
+	case <-timeout:
 		fmt.Println("Erro de timeout. Nenhuma resposta foi recebida em 1 segundo.")
 	}
-
-	<-done
-	<-done
 }
