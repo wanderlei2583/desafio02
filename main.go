@@ -33,7 +33,10 @@ func fetchUrl(url string, source string, ch chan<- response, startTime time.Time
 }
 
 func main() {
-	cep := "01001000"
+	var cep string
+	fmt.Print("Digite o CEP: ")
+	fmt.Scanln(&cep)
+
 	brasilApi := fmt.Sprintf("https://brasilapi.com.br/api/cep/v1/%s", cep)
 	viaCep := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
 
