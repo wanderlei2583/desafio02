@@ -67,13 +67,13 @@ func main() {
 
 	select {
 	case res := <-ch:
-		fmt.Printf("Saída recebida da API: %s em %v: %s\n", res.source, res.responseTime)
+		fmt.Printf("Saída recebida da API: %s em %v: %s\n", res.source, res.responseTime, res.body)
 		fmt.Println("Endereço:")
-		fmt.Printf("Logradouro:", res.Address.Logradouro)
-		fmt.Printf("Bairro:", res.Address.Bairro)
-		fmt.Printf("Cidade:", res.Address.Localidade)
-		fmt.Printf("Estado:", res.Address.UF)
-		fmt.Printf("CEP:", res.Address.CEP)
+		fmt.Println("Logradouro:", res.Address.Logradouro)
+		fmt.Println("Bairro:", res.Address.Bairro)
+		fmt.Println("Cidade:", res.Address.Localidade)
+		fmt.Println("Estado:", res.Address.UF)
+		fmt.Println("CEP:", res.Address.CEP)
 	case <-timeout:
 		fmt.Println("Erro de TimeOut: Nenhuma resposta foi recebida em até 1 segundo.")
 	}
