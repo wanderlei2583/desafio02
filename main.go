@@ -34,7 +34,7 @@ func fetchUrl(url string, source string, ch chan<- response, startTime time.Time
 
 func main() {
 	cep := "01001000"
-	brasilApi := fmt.Sprintf("https://brsilapi.com.br/api/cep/v1/%s", cep)
+	brasilApi := fmt.Sprintf("https://brasilapi.com.br/api/cep/v1/%s", cep)
 	viaCep := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
 
 	ch := make(chan response)
