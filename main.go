@@ -55,7 +55,7 @@ func main() {
 	fetchAndProcess := func(url string, source string) {
 		address, timeResponse, err := fetchUrl(url, source)
 		if err != nil {
-			results <- fmt.Sprintf("Erro ao buscar o CEP na API %s: %v", source, err)
+			results <- fmt.Sprintf("Erro ao buscar o CEP na API %s: %s", source, err)
 			return
 		}
 
