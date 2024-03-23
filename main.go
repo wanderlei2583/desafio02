@@ -8,45 +8,38 @@ import (
 	"time"
 )
 
-type response struct {
-	body         string
-	source       string
-	responseTime time.Duration
-	Address      addressData
+type AddressData struct {
+	Logradouro string `json:"logradouro,omitempty"`
+	Bairro     string `json:"bairro,omitempty"`
+	Localidade string `json:"localidade,omitempty"`
+	UF         string `json:"uf,omitempty"`
+	CEP        string `json:"cep,omitempty"`
 }
 
-type addressData struct {
-	Logradouro string `json:"logradouro"`
-	Bairro     string `json:"bairro"`
-	Localidade string `json:"localidade"`
-	UF         string `json:"uf"`
-	CEP        string `json:"cep"`
-}
+func fetchUrl(url string, source string) (AddressData, time.Duration, error) {
+	startTime := time.Now()
 
-func fetchUrl(url string, source string, ch chan<- response, startTime time.Time) {
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Erro ao fazer a requisição de", source, ":", err)
-		return
+		return AddressData{}, 0, err
 	}
+
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Erroa ao ler a resposta de", source, ":", err)
-		return
+		return AddressData{}, 0, err
 	}
 
-	var address addressData
+	var address AddressData
 	err = json.Unmarshal(body, &address)
 	if err != nil {
-		fmt.Println("Erro ao fazer o unmarshal da resposta de", source, ":", err)
-		return
+		return AddressData{}, 0, err
 	}
 
 	timeResponse := time.Since(startTime)
 
-	ch <- response{body: string(body), source: source, responseTime: timeResponse, Address: address}
+	return address, timeResponse, nil
 }
 
 func main() {
@@ -57,24 +50,32 @@ func main() {
 	brasilApi := fmt.Sprintf("https://brasilapi.com.br/api/cep/v1/%s", cep)
 	viaCep := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
 
-	ch := make(chan response)
-	startTime := time.Now()
+	results := make(chan string, 2)
 
-	go fetchUrl(brasilApi, "Brasil API", ch, startTime)
-	go fetchUrl(viaCep, "Via CEP", ch, startTime)
+	fetchAndProcess := func(url string, source string) {
+		address, timeResponse, err := fetchUrl(url, source)
+		if err != nil {
+			results <- fmt.Sprintf("Erro ao buscar o CEP na API %s: %v", source, err)
+			return
+		}
+
+		result := fmt.Sprintf("Resposta de %s em %v\nLogradouro: %s\nBairro: %s\nCidade: %s\nEstado: %s\nCEP: %s\n",
+			source, timeResponse, address.Logradouro, address.Bairro, address.Localidade, address.UF, address.CEP)
+		results <- result
+	}
+
+	go fetchAndProcess(brasilApi, "Brasil API")
+	go fetchAndProcess(viaCep, "Via CEP")
 
 	timeout := time.After(1 * time.Second)
 
-	select {
-	case res := <-ch:
-		fmt.Printf("Saída recebida da API: %s em %v: %s\n", res.source, res.responseTime, res.body)
-		fmt.Println("Endereço:")
-		fmt.Println("Logradouro:", res.Address.Logradouro)
-		fmt.Println("Bairro:", res.Address.Bairro)
-		fmt.Println("Cidade:", res.Address.Localidade)
-		fmt.Println("Estado:", res.Address.UF)
-		fmt.Println("CEP:", res.Address.CEP)
-	case <-timeout:
-		fmt.Println("Erro de TimeOut: Nenhuma resposta foi recebida em até 1 segundo.")
+	for i := 0; i < 2; i++ {
+		select {
+		case res := <-results:
+			fmt.Println(res)
+		case <-timeout:
+			fmt.Println("Erro de TimeOut, nenhuma resposta foi recebida em até 1 segundo.")
+			return
+		}
 	}
 }
